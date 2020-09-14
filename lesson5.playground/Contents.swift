@@ -1,56 +1,5 @@
 import UIKit
 
-struct Queue<T: Car> {
-    private var container: [T] = []
-    
-    mutating func push(object: T) {
-        container.append(object)
-        print("Object \(object) is added!")
-    }
-    mutating func pop() -> T? {
-        print("Object \(container.first!) popped")
-        return container.removeFirst()
-    }
-    
-    let brandComparison: (String, String) -> Bool = { (brandName: String, brandNameOwned: String) -> Bool in
-        return brandName == brandNameOwned
-    }
-    
-    let assemblyDateComparison: (Date, Date) -> Bool = { (checkDate: Date, assemblyDate: Date) -> Bool in
-        return checkDate == assemblyDate
-    }
-    
-    func filterByBrand(filter: String, predicate: (String, String) -> Bool) -> [T] {
-        var array = [T]()
-        for object in container {
-            if predicate(filter, object.brand) {
-                array.append(object)
-            }
-        }
-        return array
-    }
-    
-    func filterByAssemblyDate(filter: Date, predicate: (Date, Date) -> Bool) -> [T] {
-        var array = [T]()
-        for object in container {
-            if predicate(filter, object.assemblyDate) {
-                array.append(object)
-            }
-        }
-        return array
-    }
-    
-    subscript(index: UInt) -> T? {
-        guard index < container.count else { return nil }
-        return container[Int(index)]
-    }
-}
-
-
-// Ниже наследие Урока No.5 в котором реализована логика самих объектов которые будем
-// помещать в очередь Queue
-//
-// А в самом конце проверка к Уроку No.6
 protocol Car {
     var brand: String { get set }
     var model: String { get set }
@@ -243,6 +192,33 @@ extension SportCar: CustomStringConvertible {
     }
 }
 
+// CHECKING FOR SPORTCAR
+//
+//var mazda6 = SportCar(brand: "Mazda", model: "6", assemblyDate: Date(), trunkVolume: 440.0, turboBoost: false, limitedEdition: false)
+//var audiA7 = SportCar(brand: "Audi", model: "A7", assemblyDate: Date(), trunkVolume: 375.0, turboBoost: true, limitedEdition: false)
+//var bmwM5 = SportCar(brand: "BMW", model: "M5", assemblyDate: Date(), trunkVolume: 397.0, turboBoost: true, limitedEdition: true)
+//var sportCars: [SportCar] = [mazda6, audiA7, bmwM5]
+//
+//for car in 0..<sportCars.count {
+//    sportCars[car].showSpecification()
+//    print("")
+//    sportCars[car].turnEngine(engineModifier: .off)
+//    sportCars[car].turnWindow(windowModifier: .up)
+//    sportCars[car].turnCover()
+//    sportCars[car].turnCover()
+//    sportCars[car].useSpecialAbility()
+//    sportCars[car].operateTrunk(trunkModifier: .loadIn, luggage: Double.random(in: 1.0...400.0))
+//    sportCars[car].operateTrunk(trunkModifier: .loadIn, luggage: Double.random(in: 1.0...400.0))
+//    sportCars[car].operateTrunk(trunkModifier: .loadOut, luggage: Double.random(in: 1.0...400.0))
+//    sportCars[car].operateTrunk(trunkModifier: .loadOut, luggage: Double.random(in: 1.0...400.0))
+//    print("")
+//}
+//
+//print(mazda6)
+//print(audiA7)
+//print(bmwM5)
+
+
 class TrunkCar: Car {
     var brand: String
     var model: String
@@ -339,18 +315,26 @@ extension TrunkCar: CustomStringConvertible {
 }
 
 
-// ПРОВЕРКА НА ПРИМЕРЕ КЛАССА SPORTCAR
+// CHECKING FOR TRUNKCAR
 //
-//var mazda6 = SportCar(brand: "Mazda", model: "6", assemblyDate: Date(), trunkVolume: 440.0, turboBoost: false, limitedEdition: false)
-//var audiA7 = SportCar(brand: "Audi", model: "A7", assemblyDate: Date(), trunkVolume: 375.0, turboBoost: true, limitedEdition: false)
-//var bmwM5 = SportCar(brand: "BMW", model: "M5", assemblyDate: Date(), trunkVolume: 397.0, turboBoost: true, limitedEdition: true)
-//var sportCarQueue = Queue<SportCar>()
+//var volvo = TrunkCar(brand: "Volvo", model: "TX2500", assemblyDate: Date(), trunkVolume: 2500.0, allWheelDrive: false)
+//var toyota = TrunkCar(brand: "Toyota", model: "Tundra", assemblyDate: Date(), trunkVolume: 1500.0, allWheelDrive: true)
+//var truckCars: [TrunkCar] = [volvo, toyota]
 //
-//sportCarQueue.push(object: mazda6)
-//sportCarQueue.push(object: audiA7)
-//sportCarQueue.push(object: bmwM5)
+//for car in 0..<truckCars.count {
+//    truckCars[car].showSpecification()
+//    print("")
+//    truckCars[car].turnEngine(engineModifier: .off)
+//    truckCars[car].turnWindow(windowModifier: .up)
+//    truckCars[car].turnCover()
+//    truckCars[car].turnCover()
+//    truckCars[car].useSpecialAbility()
+//    truckCars[car].operateTrunk(trunkModifier: .loadIn, luggage: Double.random(in: 1000.0...4000.0))
+//    truckCars[car].operateTrunk(trunkModifier: .loadIn, luggage: Double.random(in: 1000.0...4000.0))
+//    truckCars[car].operateTrunk(trunkModifier: .loadOut, luggage: Double.random(in: 1000.0...4000.0))
+//    truckCars[car].operateTrunk(trunkModifier: .loadOut, luggage: Double.random(in: 1000.0...4000.0))
+//    print("")
+//}
 //
-//print(sportCarQueue[5])
-//print(sportCarQueue[1])
-//
-//sportCarQueue.filterByBrand(filter: "Mazda", predicate: sportCarQueue.brandComparison)
+//print(volvo)
+//print(toyota)
