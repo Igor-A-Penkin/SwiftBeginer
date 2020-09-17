@@ -1,5 +1,14 @@
 import UIKit
 
+// READ ME BELOW
+// Добавлен enum operationError с перечислением возможных ошибок.
+// Метод operateTrunk() в расширении пртокола Car, метод useSpecialAbility() в классах SportCar и TrunkCar пепеписаны, теперь они могут возвращать ошибки.
+// В классы SportCar и TrunkCar внесены изменения для возможости обработки ошибок (исключений):
+// добавлена структура CarOwner хранящая информацию о владельце,
+// добавлена структура DriverRequirements хранящая информацию о требованиях к водителю:
+// - владелец может взаимдействовать с окнами, багажником, и т.д.,
+// - владелец не соответствующий хотя бы одному требованию водителя не может запускать/глушить двигатель, вызывать службу помощи на дороге.
+
 struct Queue<T: Car> {
     private var container: [T] = []
     
@@ -7,6 +16,7 @@ struct Queue<T: Car> {
         container.append(object)
         print("Object \(object) is added!")
     }
+    
     mutating func pop() -> T? {
         print("Object \(container.first!) popped")
         return container.removeFirst()
@@ -41,16 +51,11 @@ struct Queue<T: Car> {
     }
     
     subscript(index: UInt) -> T? {
-        guard index < container.count else { return nil }
+        guard index < container.count && container.count != 0 else { return nil }
         return container[Int(index)]
     }
 }
 
-
-// Ниже наследие Урока No.5 в котором реализована логика самих объектов которые будем
-// помещать в очередь Queue
-//
-// А в самом конце проверка к Уроку No.6
 protocol Car {
     var brand: String { get set }
     var model: String { get set }
@@ -60,33 +65,41 @@ protocol Car {
     var engine: engineModifier { get set }
     var window: windowModifier { get set }
     var trunkFreeSpace: Double { get set }
+    var carOwners: [String: CarOwner]? { get set }
+    var driverRequirements: DriverRequirements { get set }
     
     func showSpecification()
     func turnCover()
-    func useSpecialAbility()
+    func useSpecialAbility() -> operationError?
 }
 
 extension Car {
-    mutating func operateTrunk(trunkModifier: trunkModifier, luggage: Double) {
+    mutating func operateTrunk(trunkModifier: trunkModifier, luggage: Double) -> operationError? {
         switch trunkModifier {
         case .loadIn:
-            if self.trunkFilledVolume+luggage<trunkVolume {
-                self.trunkFilledVolume += luggage
-                print("Your luggage has been successfully loaded in!")
-            } else {
-                print("Fail: your luggage is too huge! Total trunk volume is \(trunkVolume.rounded())")
+            guard trunkFilledVolume+luggage<=trunkVolume else {
+                //print("Fail: your luggage is too huge!")
+                return operationError.tooHugeLuggage(excessiveVolume: trunkFilledVolume+luggage-trunkVolume)
             }
+            self.trunkFilledVolume += luggage
+            print("Your luggage has been successfully loaded in!")
+            return nil
         case .loadOut:
-            if self.trunkFilledVolume-luggage>=0 {
-                self.trunkFilledVolume -= luggage
-                print("Your luggage has been successfully loaded out!")
-            } else {
-                print("Fail: there is no so much luggage! Here is only \(trunkFilledVolume.rounded())")
+            guard trunkFilledVolume-luggage>=0 else {
+                //print("Fail: there is no so much luggage!")
+                return operationError.notEnoughLuggage(filledVolume: trunkFilledVolume)
             }
+            self.trunkFilledVolume -= luggage
+            print("Your luggage has been successfully loaded out!")
+            return nil
         }
     }
     
-    mutating func turnEngine(engineModifier: engineModifier) {
+    mutating func turnEngine(engineModifier: engineModifier, carOwner: CarOwner) throws {
+        guard driverValidation(carOwner: carOwner) == nil else {
+            throw driverValidation(carOwner: carOwner)!
+        }
+        
         engine = engineModifier
         print(engine.rawValue)
     }
@@ -95,6 +108,29 @@ extension Car {
         window = windowModifier
         print(window.rawValue)
     }
+    
+    func driverValidation(carOwner: CarOwner) -> operationError? {
+        guard carOwner.validDrivingLicense == driverRequirements.validDrivingLicense else {
+            return operationError.accessDenied
+        }
+        guard carOwner.vehilceCategory?.contains(driverRequirements.requiredCategory) ?? false else {
+            return operationError.accessDenied
+        }
+        guard carOwner.yearsOld >= driverRequirements.yearsOld ?? 0 else {
+            return operationError.accessDenied
+        }
+        guard carOwner.expierenceInYear ?? 0 >= driverRequirements.requiredExperienceInYear ?? 0 else {
+            return operationError.accessDenied
+        }
+        return nil
+    }
+}
+
+enum operationError: Error {
+    case tooHugeLuggage(excessiveVolume: Double)
+    case notEnoughLuggage(filledVolume: Double)
+    case missingSpeciaAbility
+    case accessDenied
 }
 
 enum engineModifier: String {
@@ -134,6 +170,21 @@ enum trunkModifier {
     case loadOut
 }
 
+struct CarOwner {
+    var name: String
+    var surname: String
+    var yearsOld: Int
+    var validDrivingLicense: Bool
+    var vehilceCategory: [String]?
+    var expierenceInYear: Int?
+}
+
+struct DriverRequirements {
+    var yearsOld: Int?
+    var validDrivingLicense: Bool?
+    var requiredExperienceInYear: Int?
+    var requiredCategory: String
+}
 
 class SportCar: Car {
     var brand: String
@@ -144,6 +195,8 @@ class SportCar: Car {
     var engine: engineModifier
     var window: windowModifier
     var trunkFreeSpace: Double
+    var carOwners: [String: CarOwner]?
+    var driverRequirements: DriverRequirements
     
     static var limitedNumber: UInt8 = 0
     
@@ -185,7 +238,7 @@ class SportCar: Car {
         }
     }
     
-    init( brand: String, model: String, assemblyDate: Date, trunkVolume: Double, turboBoost: Bool, limitedEdition: Bool) {
+    init(brand: String, model: String, assemblyDate: Date, trunkVolume: Double, turboBoost: Bool, limitedEdition: Bool, carOwners: [String: CarOwner], driverRequirements: DriverRequirements) {
         self.brand = brand
         self.model = model
         self.assemblyDate = assemblyDate
@@ -198,6 +251,8 @@ class SportCar: Car {
         self.limitedEdition = limitedEdition
         self.cover = coverModifier.cover
         self.turbo = turboModifier.off
+        self.carOwners = carOwners
+        self.driverRequirements = driverRequirements
         
         if self.limitedEdition && SportCar.limitedNumber<=100 {
             SportCar.limitedNumber += 1
@@ -228,12 +283,22 @@ class SportCar: Car {
         cover = cover.turnCover()
     }
     
-    func useSpecialAbility() {
-        if self.turboBoost {
-            turbo.turnTurbo()
-        } else {
-            print("Fail: you had to choose more expensive configuration buying your car :(")
+    func callRoadHelp(carOwner: CarOwner) throws {
+        guard driverValidation(carOwner: carOwner) == nil else {
+            throw driverValidation(carOwner: carOwner)!
         }
+        
+        print("Calling Road help for evacuator...")
+    }
+    
+    func useSpecialAbility() -> operationError? {
+        guard turboBoost else {
+            //print("Fail: you had to choose more expensive configuration buying your car :(")
+            return operationError.missingSpeciaAbility
+        }
+        
+        turbo.turnTurbo()
+        return nil
     }
 }
 
@@ -252,6 +317,8 @@ class TrunkCar: Car {
     var engine: engineModifier
     var window: windowModifier
     var trunkFreeSpace: Double
+    var carOwners: [String: CarOwner]?
+    var driverRequirements: DriverRequirements
     
     private(set) var allWheelDrive: Bool
     private(set) var cover: coverModifier
@@ -291,7 +358,7 @@ class TrunkCar: Car {
         }
     }
     
-    init(brand: String, model: String, assemblyDate: Date, trunkVolume: Double, allWheelDrive: Bool) {
+    init(brand: String, model: String, assemblyDate: Date, trunkVolume: Double, allWheelDrive: Bool, carOwners: [String: CarOwner], driverRequirements: DriverRequirements) {
         self.allWheelDrive = allWheelDrive
         self.cover = coverModifier.cover
         self.AWD = AWDModifier.off
@@ -303,6 +370,8 @@ class TrunkCar: Car {
         self.trunkFreeSpace = trunkVolume
         self.engine = engineModifier.off
         self.window = windowModifier.up
+        self.carOwners = carOwners
+        self.driverRequirements = driverRequirements
     }
     
     func showSpecification() {
@@ -323,12 +392,22 @@ class TrunkCar: Car {
         cover = cover.turnCover()
     }
     
-    func useSpecialAbility() {
-        if self.allWheelDrive {
-            AWD.turnAWD()
-        } else {
-            print("Fail: you had to choose more expensive configuration buying your car :(")
+    func useSpecialAbility() -> operationError? {
+        guard allWheelDrive else {
+            //print("Fail: you had to choose more expensive configuration buying your car :(")
+            return operationError.missingSpeciaAbility
         }
+        
+        AWD.turnAWD()
+        return nil
+    }
+    
+    func callRoadHelp(carOwner: CarOwner) throws {
+        guard driverValidation(carOwner: carOwner) == nil else {
+            throw driverValidation(carOwner: carOwner)!
+        }
+        
+        print("Calling Road help for tractive unit...")
     }
 }
 
@@ -339,18 +418,65 @@ extension TrunkCar: CustomStringConvertible {
 }
 
 
-// ПРОВЕРКА НА ПРИМЕРЕ КЛАССА SPORTCAR
+var carOwners = [
+    "Dad": CarOwner(name: "John", surname: "Johnson", yearsOld: 42, validDrivingLicense: true, vehilceCategory: ["A", "B", "B1", "C", "M"], expierenceInYear: 24),
+    "Son": CarOwner(name: "Sam", surname: "Johnson", yearsOld: 23, validDrivingLicense: true, vehilceCategory: ["A", "M"], expierenceInYear: 5),
+    "Daughter": CarOwner(name: "Lilly", surname: "Johnson", yearsOld: 17, validDrivingLicense: true, vehilceCategory: ["A", "B", "B1", "M"], expierenceInYear: 1),
+    "Mom": CarOwner(name: "Sarha", surname: "Spencer", yearsOld: 39, validDrivingLicense: true, vehilceCategory: ["B", "B1"], expierenceInYear: nil)
+]
+var sportCarDriverRequirements = DriverRequirements(yearsOld: 18, validDrivingLicense: true, requiredExperienceInYear: 3, requiredCategory: "B")
+var trunkCarDriverRequirements = DriverRequirements(yearsOld: 18, validDrivingLicense: true, requiredExperienceInYear: 5, requiredCategory: "C")
+var mazda6 = SportCar(brand: "Mazda", model: "6", assemblyDate: Date(), trunkVolume: 440.0, turboBoost: false, limitedEdition: false, carOwners: carOwners, driverRequirements: sportCarDriverRequirements)
+var volvo = TrunkCar(brand: "Volvo", model: "XT1500", assemblyDate: Date(), trunkVolume: 1500, allWheelDrive: true, carOwners: carOwners, driverRequirements: trunkCarDriverRequirements)
+
+// ПРОВЕРКА к заданию 1 на примере класса SportCar
 //
-//var mazda6 = SportCar(brand: "Mazda", model: "6", assemblyDate: Date(), trunkVolume: 440.0, turboBoost: false, limitedEdition: false)
-//var audiA7 = SportCar(brand: "Audi", model: "A7", assemblyDate: Date(), trunkVolume: 375.0, turboBoost: true, limitedEdition: false)
-//var bmwM5 = SportCar(brand: "BMW", model: "M5", assemblyDate: Date(), trunkVolume: 397.0, turboBoost: true, limitedEdition: true)
-//var sportCarQueue = Queue<SportCar>()
+//if let error = mazda6.operateTrunk(trunkModifier: .loadIn, luggage: 200) {
+//    print("Error: \(error)" + error.localizedDescription)
+//}
+//if let error = mazda6.operateTrunk(trunkModifier: .loadIn, luggage: 241) {
+//    print("Error: \(error)")
+//}
+//if let error = mazda6.operateTrunk(trunkModifier: .loadOut, luggage: 201) {
+//    print("Error: \(error)")
+//}
+//print(mazda6.trunkFilledVolume)
 //
-//sportCarQueue.push(object: mazda6)
-//sportCarQueue.push(object: audiA7)
-//sportCarQueue.push(object: bmwM5)
+//if let error = mazda6.useSpecialAbility() {
+//    print("Error: \(error) /" + error.localizedDescription)
+//}
+//if let error = volvo.useSpecialAbility() {
+//    print("Error: \(error) /" + error.localizedDescription)
+//}
 //
-//print(sportCarQueue[5])
-//print(sportCarQueue[1])
+// ПРОВЕРКА к заданию 2 на примере класса TrunkCar
 //
-//sportCarQueue.filterByBrand(filter: "Mazda", predicate: sportCarQueue.brandComparison)
+//do {
+//    try mazda6.turnEngine(engineModifier: .on, carOwner: carOwners["Dad"]!)
+//} catch operationError.accessDenied {
+//    print("Access denied for this owner!")
+//} catch let error {
+//    print(error.localizedDescription)
+//}
+//do {
+//    try mazda6.turnEngine(engineModifier: .on, carOwner: carOwners["Son"]!)
+//} catch operationError.accessDenied {
+//    print("Access denied for this owner!")
+//} catch let error {
+//    print(error.localizedDescription)
+//}
+//
+//do {
+//    try volvo.callRoadHelp(carOwner: carOwners["Mom"]!)
+//} catch operationError.accessDenied {
+//    print("Driver has no authority!")
+//} catch let error {
+//    print(error.localizedDescription)
+//}
+//do {
+//    try volvo.callRoadHelp(carOwner: carOwners["Dad"]!)
+//} catch operationError.accessDenied {
+//    print("Driver has no authority!")
+//} catch let error {
+//    print(error.localizedDescription)
+//}
