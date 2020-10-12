@@ -47,15 +47,15 @@ class ViewController: UIViewController {
         switch result {
         case .win:
             statuslabel.text = "You have won!"
-            self.view.backgroundColor = UIColor.green
+            //self.view.backgroundColor = UIColor.green
         case .start:
             reset()
         case .lose:
             statuslabel.text = "You have lost!"
-            self.view.backgroundColor = UIColor.red
+            //self.view.backgroundColor = UIColor.red
         case .draw:
             statuslabel.text = "It is a draw!"
-            self.view.backgroundColor = UIColor.lightGray
+            //self.view.backgroundColor = UIColor.systemGray6
         }
     }
     
