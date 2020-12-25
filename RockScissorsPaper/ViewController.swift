@@ -61,11 +61,11 @@ class ViewController: UIViewController {
     
     func reset() {
         statuslabel.text = "Rock, Paper or Scissors?"
-        self.view.backgroundColor = UIColor.white
+        //self.view.backgroundColor = UIColor.white
         rockButton.isHidden = false
         paperButton.isHidden = false
         scissorsButton.isHidden = false
-        resetButton.isHidden = false
+        resetButton.isHidden = true
         robotButton.setTitle("🤖", for: .normal)
     }
     
